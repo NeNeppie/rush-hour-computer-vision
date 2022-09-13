@@ -20,21 +20,15 @@ bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
 
 int main(void)
 {
-	//Mat image = processToMat(L"scrcpy.exe");
-	Mat image = imread("original.jpg");
+	Mat image = processToMat(L"scrcpy.exe");
+	//Mat image = imread("original.jpg");
 
 	Rect boardCoords(Point(BOARD_TOPLEFT), Point(BOARD_BOTTOMRIGHT));
 	image = image(boardCoords);
 	resize(image, image, Size(image.cols, image.rows), INTER_LINEAR);
 	resize(image, image, Size(image.cols/2, image.rows/2), INTER_LINEAR);
-	imshow("window", image);
-	waitKey(0);
-
-	/*Mat image = imread("output.jpg");
-	if (image.empty()) {
-		cerr << "imread be stupid" << endl;
-		return -1;
-	}*/
+	//imshow("window", image);
+	//waitKey(0);
 
 	Mat boardSquares[36];
 	char boardStatus[36]{};
@@ -68,8 +62,14 @@ int main(void)
 		}
 
 		if (compareColAndRow(midColDataMap, midRowDataMap)) {
-			auto it = midRowDataMap.find(32);
-			if (it != midRowDataMap.end() && it->second > 1) {
+			int redRate = 0;
+			for (uchar j = 32; j < 35; j++) {
+				auto searchIt = midRowDataMap.find(j);
+				if (searchIt != midRowDataMap.end()) {
+					redRate += searchIt->second;
+				}
+			}
+			if (redRate > 3) {
 				boardStatus[i] = 'A';
 				boardStatus[i + 1] = 'A';
 				continue;
@@ -91,12 +91,12 @@ int main(void)
 				}
 
 				if (orangeRate > purpleRate) {
-					// Orange piece?
+					// Orange piece
 					boardStatus[i] = currPieceMarker;
 					boardStatus[i + 6] = currPieceMarker;
 				}
 				else {
-					// Purple piece?
+					// Purple piece
 					boardStatus[i] = currPieceMarker;
 					boardStatus[i + 6] = currPieceMarker;
 					boardStatus[i + 12] = currPieceMarker;
@@ -119,12 +119,12 @@ int main(void)
 				}
 
 				if (orangeRate > purpleRate) {
-					// Orange piece?
+					// Orange piece
 					boardStatus[i] = currPieceMarker;
 					boardStatus[i + 1] = currPieceMarker;
 				}
 				else {
-					// Purple piece?
+					// Purple piece
 					boardStatus[i] = currPieceMarker;
 					boardStatus[i + 1] = currPieceMarker;
 					boardStatus[i + 2] = currPieceMarker;
