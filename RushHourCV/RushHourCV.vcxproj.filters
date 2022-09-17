@@ -18,10 +18,13 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Imgproc.cpp">
+    <ClCompile Include="Vision.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Process.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Solver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -29,10 +32,13 @@
     <ClInclude Include="Process.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Imgproc.h">
+    <ClInclude Include="Vision.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Solver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

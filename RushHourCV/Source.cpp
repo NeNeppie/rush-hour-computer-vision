@@ -1,148 +1,106 @@
 #include "Process.h"
-#include "Imgproc.h"
-#include <map>
-
-#define BOARD_SIZE 36	// 6 * 6
-
-/*
-Orange Piece:
-Middle - 212, 213, 214
-Edges - 167, 168, 169
-
-Purple Piece:
-Middle - 212, 213, 214
-Edges - 170, 171, 172
-
-Player Hat - 32, 33, 34
-*/
+#include "Vision.h"
+#include "Solver.h"
 
 bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
 
 int main(void)
 {
-	Mat image = processToMat(L"scrcpy.exe");
-	//Mat image = imread("original.jpg");
+	//Mat image = processToMat(L"scrcpy.exe");
+	Mat image = imread("original.jpg");
 
-	Rect boardCoords(Point(BOARD_TOPLEFT), Point(BOARD_BOTTOMRIGHT));
+	Rect boardCoords(Point(BOARD_TOPLEFT), Point(BOARD_BOTTOMRIGHT));	// TODO: Make this dynamic
 	image = image(boardCoords);
-	resize(image, image, Size(image.cols, image.rows), INTER_LINEAR);
 	resize(image, image, Size(image.cols/2, image.rows/2), INTER_LINEAR);
 	//imshow("window", image);
 	//waitKey(0);
 
-	Mat boardSquares[36];
-	char boardStatus[36]{};
-	char currPieceMarker = 'B';
-	double cropX = image.cols / 6.0;
-	double cropY = image.rows / 6.0;
+	double cropX = image.cols / (float)BOARD_SIZE;
+	double cropY = image.rows / (float)BOARD_SIZE;
 	cvtColor(image, image, COLOR_RGB2GRAY);
-	for (int y = 0; y < 6; y++) {
-		for (int x = 0; x < 6; x++) {
-			boardSquares[6 * y + x] = image(Range(cropY * y, cropY * (y + 1)), Range(cropX * x, cropX * (x + 1)));
-		}
-	}
 
-	int squareMidRow = boardSquares[0].rows / 2;
-	int squareMidCol = boardSquares[0].cols / 2;
-	for (int i = 0; i < 36; i++) {
-		if (boardStatus[i]) {
-			continue;
-		}
-
-		Mat midColData = boardSquares[i].col(squareMidCol);
-		Mat midRowData = boardSquares[i].row(squareMidRow);
-
-		// Map and compare range of values?
-		map<uchar, int> midColDataMap, midRowDataMap;
-		for (int y = 0; y < boardSquares[i].rows; y++) {
-			midColDataMap[midColData.at<uchar>(y, 0)]++;
-		}
-		for (int x = 0; x < boardSquares[i].cols; x++) {
-			midRowDataMap[midRowData.at<uchar>(0, x)]++;
-		}
-
-		if (compareColAndRow(midColDataMap, midRowDataMap)) {
-			int redRate = 0;
-			for (uchar j = 32; j < 35; j++) {
-				auto searchIt = midRowDataMap.find(j);
-				if (searchIt != midRowDataMap.end()) {
-					redRate += searchIt->second;
-				}
-			}
-			if (redRate > 3) {
-				boardStatus[i] = 'A';
-				boardStatus[i + 1] = 'A';
+	char boardStatus[BOARD_SIZE][BOARD_SIZE]{};
+	char currPieceMarker = 'B';
+	for (int i = 0; i < BOARD_SIZE; i++) {
+		for (int j = 0; j < BOARD_SIZE; j++) {
+			if (boardStatus[i][j]) {
 				continue;
 			}
-			else if (midColDataMap.size() < midRowDataMap.size()) {
-				// Vertical Piece
-				int orangeRate = 0, purpleRate = 0;
-				for (uchar j = 167; j <= 169; j++) {
-					auto searchIt = midRowDataMap.find(j);
-					if (searchIt != midRowDataMap.end()) {
-						orangeRate += searchIt->second;
-					}
-				}
-				for (uchar j = 170; j <= 172; j++) {
-					auto searchIt = midRowDataMap.find(j);
-					if (searchIt != midRowDataMap.end()) {
-						purpleRate += searchIt->second;
-					}
-				}
 
-				if (orangeRate > purpleRate) {
-					// Orange piece
-					boardStatus[i] = currPieceMarker;
-					boardStatus[i + 6] = currPieceMarker;
+			// Cutting a square from the image
+			Mat square = image(Range(cropY * i, cropY * (i + 1)), Range(cropX * j, cropX * (j + 1)));
+
+			// Getting the middle row and column
+			Mat midColData = square.col(square.cols / 2);
+			Mat midRowData = square.row(square.rows / 2);
+
+			// Map and compare range of values?
+			map<uchar, int> midColDataMap, midRowDataMap;
+			for (int y = 0; y < square.rows; y++) {
+				midColDataMap[midColData.at<uchar>(y, 0)]++;
+			}
+			for (int x = 0; x < square.cols; x++) {
+				midRowDataMap[midRowData.at<uchar>(0, x)]++;
+			}
+
+			if (compareColAndRow(midColDataMap, midRowDataMap)) {
+				int redRate = mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END);
+				if (redRate > 3) {
+					boardStatus[i][j] = 'A';
+					boardStatus[i][j + 1] = 'A';
+					continue;
+				}
+				else if (midColDataMap.size() < midRowDataMap.size()) {
+					// Vertical Piece
+					int orangeRate = mapRangeFind(midRowDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
+					int purpleRate = mapRangeFind(midRowDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
+
+					if (orangeRate > purpleRate) {
+						// Orange piece
+						boardStatus[i][j] = currPieceMarker;
+						boardStatus[i + 1][j] = currPieceMarker;
+					}
+					else {
+						// Purple piece
+						boardStatus[i][j] = currPieceMarker;
+						boardStatus[i + 1][j] = currPieceMarker;
+						boardStatus[i + 2][j] = currPieceMarker;
+					}
 				}
 				else {
-					// Purple piece
-					boardStatus[i] = currPieceMarker;
-					boardStatus[i + 6] = currPieceMarker;
-					boardStatus[i + 12] = currPieceMarker;
+					// Horizontal Piece
+					int orangeRate = mapRangeFind(midColDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
+					int purpleRate = mapRangeFind(midColDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
+
+					if (orangeRate > purpleRate) {
+						// Orange piece
+						boardStatus[i][j] = currPieceMarker;
+						boardStatus[i][j + 1] = currPieceMarker;
+					}
+					else {
+						// Purple piece
+						boardStatus[i][j] = currPieceMarker;
+						boardStatus[i][j + 1] = currPieceMarker;
+						boardStatus[i][j + 2] = currPieceMarker;
+					}
 				}
+				++currPieceMarker;
 			}
 			else {
-				// Horizontal Piece
-				int orangeRate = 0, purpleRate = 0;
-				for (uchar j = 167; j <= 169; j++) {
-					auto searchIt = midColDataMap.find(j);
-					if (searchIt != midColDataMap.end()) {
-						orangeRate += searchIt->second;
-					}
-				}
-				for (uchar j = 170; j <= 172; j++) {
-					auto searchIt = midColDataMap.find(j);
-					if (searchIt != midColDataMap.end()) {
-						purpleRate += searchIt->second;
-					}
-				}
-
-				if (orangeRate > purpleRate) {
-					// Orange piece
-					boardStatus[i] = currPieceMarker;
-					boardStatus[i + 1] = currPieceMarker;
-				}
-				else {
-					// Purple piece
-					boardStatus[i] = currPieceMarker;
-					boardStatus[i + 1] = currPieceMarker;
-					boardStatus[i + 2] = currPieceMarker;
-				}
+				boardStatus[i][j] = '.';
 			}
-			++currPieceMarker;
-		}
-		else {
-			boardStatus[i] = '.';
 		}
 	}
 
-	for (int i = 0; i < 6; i++) {
-		for (int j = 0; j < 6; j++) {
-			cout << boardStatus[6 * i + j];
+	// Printing the board
+	for (int i = 0; i < BOARD_SIZE; i++) {
+		for (int j = 0; j < BOARD_SIZE; j++) {
+			cout << boardStatus[i][j];
 		}
 		cout << endl;
 	}
+
+	vector<Car> cars = parseBoard(boardStatus);
 
 	return 0;
 }
