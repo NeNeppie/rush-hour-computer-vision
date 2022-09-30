@@ -1,40 +1,37 @@
 #include "Process.h"
 #include "Vision.h"
 #include "Solver.h"
+#include "Board.h"
+#include <chrono>
 
 bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
 
 int main(void)
 {
-	//Mat image = processToMat(L"scrcpy.exe");
-	Mat image = imread("original.jpg");
+	Mat image = processToMat(L"scrcpy.exe");
+	if (image.empty()) {
+		return -1;
+	}
+	//Mat image = imread("original.jpg");		//! TEMP
+	focusOnBoard(image);
 
-	Rect boardCoords(Point(BOARD_TOPLEFT), Point(BOARD_BOTTOMRIGHT));	// TODO: Make this dynamic
-	image = image(boardCoords);
-	resize(image, image, Size(image.cols/2, image.rows/2), INTER_LINEAR);
-	//imshow("window", image);
-	//waitKey(0);
+	const double cropX = image.cols / (float)BOARD_SIZE;
+	const double cropY = image.rows / (float)BOARD_SIZE;
 
-	double cropX = image.cols / (float)BOARD_SIZE;
-	double cropY = image.rows / (float)BOARD_SIZE;
-	cvtColor(image, image, COLOR_RGB2GRAY);
-
-	char boardStatus[BOARD_SIZE][BOARD_SIZE]{};
-	char currPieceMarker = 'B';
+	Board board{};
 	for (int i = 0; i < BOARD_SIZE; i++) {
 		for (int j = 0; j < BOARD_SIZE; j++) {
-			if (boardStatus[i][j]) {
+			if (board.getMask() & (uint64_t)1 << (i * 6 + j)) {
 				continue;
 			}
 
 			// Cutting a square from the image
 			Mat square = image(Range(cropY * i, cropY * (i + 1)), Range(cropX * j, cropX * (j + 1)));
-
 			// Getting the middle row and column
 			Mat midColData = square.col(square.cols / 2);
 			Mat midRowData = square.row(square.rows / 2);
 
-			// Map and compare range of values?
+			// Map and later on compare pixel data
 			map<uchar, int> midColDataMap, midRowDataMap;
 			for (int y = 0; y < square.rows; y++) {
 				midColDataMap[midColData.at<uchar>(y, 0)]++;
@@ -44,64 +41,54 @@ int main(void)
 			}
 
 			if (compareColAndRow(midColDataMap, midRowDataMap)) {
-				int redRate = mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END);
-				if (redRate > 3) {
-					boardStatus[i][j] = 'A';
-					boardStatus[i][j + 1] = 'A';
+				// Main piece (The "red car")
+				if (mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END) > 3) {
+					board.addMain(i, j);
 					continue;
 				}
 				else if (midColDataMap.size() < midRowDataMap.size()) {
-					// Vertical Piece
-					int orangeRate = mapRangeFind(midRowDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
-					int purpleRate = mapRangeFind(midRowDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
-
-					if (orangeRate > purpleRate) {
-						// Orange piece
-						boardStatus[i][j] = currPieceMarker;
-						boardStatus[i + 1][j] = currPieceMarker;
+					// Vertical piece
+					if (mapRangeFind(midRowDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END) >
+						mapRangeFind(midRowDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END)) {
+						board.addPiece(i, j, 2, Vert);
 					}
 					else {
-						// Purple piece
-						boardStatus[i][j] = currPieceMarker;
-						boardStatus[i + 1][j] = currPieceMarker;
-						boardStatus[i + 2][j] = currPieceMarker;
+						board.addPiece(i, j, 3, Vert);
 					}
 				}
 				else {
-					// Horizontal Piece
-					int orangeRate = mapRangeFind(midColDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
-					int purpleRate = mapRangeFind(midColDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
-
-					if (orangeRate > purpleRate) {
-						// Orange piece
-						boardStatus[i][j] = currPieceMarker;
-						boardStatus[i][j + 1] = currPieceMarker;
+					// Horizontal piece
+					if (mapRangeFind(midColDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END) >
+						mapRangeFind(midColDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END)) {
+						board.addPiece(i, j, 2, Horz);
 					}
 					else {
-						// Purple piece
-						boardStatus[i][j] = currPieceMarker;
-						boardStatus[i][j + 1] = currPieceMarker;
-						boardStatus[i][j + 2] = currPieceMarker;
+						board.addPiece(i, j, 3, Horz);
 					}
 				}
-				++currPieceMarker;
-			}
-			else {
-				boardStatus[i][j] = '.';
 			}
 		}
 	}
 
-	// Printing the board
-	for (int i = 0; i < BOARD_SIZE; i++) {
-		for (int j = 0; j < BOARD_SIZE; j++) {
-			cout << boardStatus[i][j];
+	cout << "Generated board: " << endl;
+	board.printFlat();
+	system("PAUSE");
+
+	// Solving the generated board
+	Solver solver;
+	auto t_start = chrono::system_clock::now();
+	auto path = solver.solveBoard(board);
+	chrono::duration<float> t_durr = chrono::system_clock::now() - t_start;
+	if (!path.empty()) {
+		for (Board& b : path) {
+			b.printBoard();
+			cout << endl;
 		}
-		cout << endl;
 	}
-
-	vector<Car> cars = parseBoard(boardStatus);
-
+	else {
+		cout << "Couldn't find a solution. Something's wrong..." << endl;
+	}
+	cout << "Time taken: " << to_string(t_durr.count()) << " seconds" << endl;
 	return 0;
 }
 

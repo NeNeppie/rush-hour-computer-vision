@@ -1,28 +1,26 @@
 #pragma once
-#include "stdafx.h"
-#include <vector>
+#include "Board.h"
+#include <queue>
+#include <set>
 
-#define BOARD_SIZE 6
-
-typedef uint64_t bitboard;
-
-typedef struct {
-	int row;
-	int col;
-} coords;
-
-class Car 
+class Solver
 {
 public:
-	Car(int row, int col, int l, bool v);
-
-	int row;	// starting row
-	int col;	// starting col
-	int length;	// size (2 / 3)
-	bool isVertical;
+	Solver();
+	int getNextMoves(Board& b);
+	vector<Board> solveBoard(const Board& root);
 
 private:
-
+	queue<Board> m_moves;
+	queue<vector<Board>> m_paths;
+	bitb m_topRow, m_bottomRow, m_leftCol, m_rightCol;
 };
 
-vector<Car> parseBoard(char board[][BOARD_SIZE]);
+/*
+1 1 1 1 1 1
+1 0 0 0 0 1
+1 0 0 0 0 1
+1 0 0 0 0 1
+1 0 0 0 0 1
+1 1 1 1 1 1
+*/

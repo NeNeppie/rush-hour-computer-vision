@@ -1,26 +1,117 @@
 #include "Solver.h"
 
-Car::Car(int row, int col, int l, bool v) :
-	row(row), col(col), length(l), isVertical(v) {}
-
-// Given a Rush Hour game board, get a list of pieces
-vector<Car> parseBoard(char board[][BOARD_SIZE])
+Solver::Solver()
 {
-	vector<Car> pieces;
-	map<char, vector<coords>> locations;
-	for (int i = 0; i < BOARD_SIZE; i++) {
-		for (int j = 0; j < BOARD_SIZE; j++) {
-			if (board[i][j] != '.') {
-				locations[board[i][j]].push_back(coords{ i , j });
+	m_topRow = 0, m_bottomRow = 0, m_leftCol = 0, m_rightCol = 0;
+	for (int col = 0; col < BOARD_SIZE; col++) {
+		m_topRow |= (bitb)1 << (0 * BOARD_SIZE + col);
+		m_bottomRow |= (bitb)1 << ((BOARD_SIZE - 1) * BOARD_SIZE + col);
+	}
+	for (int row = 0; row < BOARD_SIZE; row++) {
+		m_leftCol |= (bitb)1 << (row * BOARD_SIZE);
+		m_rightCol |= (bitb)1 << (row * BOARD_SIZE + (BOARD_SIZE - 1));
+	}
+}
+
+// returns number of moves generated
+int Solver::getNextMoves(Board& b)
+{
+	int generatedMoves = 0;
+	bitb boardMask = b.getMask();
+	for (const Piece& p : b.getPieces()) {
+		if (p.m_orient == Vert) {
+			// Vertical move upwards (shift right - negative)
+			if ((p.m_mask & m_topRow) == 0) {
+				bitb mask = p.m_mask;
+				int steps = -1;
+				do {
+					mask = (mask >> Vert) & ~mask;
+					if ((mask & boardMask) != 0) {
+						break;
+					}
+					m_moves.emplace(Board(b, p, steps));
+					++generatedMoves;
+					--steps;
+				} while ((mask & m_topRow) == 0);
+			}
+			// Vertical move downwards (shift left - positive)
+			if ((p.m_mask & m_bottomRow) == 0) {
+				bitb mask = p.m_mask;
+				int steps = 1;
+				do {
+					mask = (mask << Vert) & ~mask;
+					if ((mask & boardMask) != 0) {
+						break;
+					}
+					m_moves.emplace(Board(b, p, steps));
+					++generatedMoves;
+					++steps;
+				} while ((mask & m_bottomRow) == 0);
+			}
+		}
+		else {
+			// Horizontal move left (shift right - negative)
+			if ((p.m_mask & m_leftCol) == 0) {
+				bitb mask = p.m_mask;
+				int steps = -1;
+				do {
+					mask = (mask >> Horz) & ~mask;
+					if ((mask & boardMask) != 0) {
+						break;
+					}
+					m_moves.emplace(Board(b, p, steps));
+					++generatedMoves;
+					--steps;
+				} while ((mask & m_leftCol) == 0);
+			}
+			// Horizontal move right (shift left - positive)
+			if ((p.m_mask & m_rightCol) == 0) {
+				bitb mask = p.m_mask;
+				int steps = 1;
+				do {
+					mask = (mask << Horz) & ~mask;
+					if ((mask & boardMask) != 0) {
+						break;
+					}
+					m_moves.emplace(Board(b, p, steps));
+					++generatedMoves;
+					++steps;
+				} while ((mask & m_rightCol) == 0);
 			}
 		}
 	}
-	for (auto it = locations.begin(); it != locations.end(); ++it) {
-		bool isVertical = false;
-		if (it->second[0].col == it->second[1].col) {
-			isVertical = true;
+	return generatedMoves;
+}
+
+vector<Board> Solver::solveBoard(const Board& root)
+{
+	vector<Board> path;
+	set<pair<bitb, bitb>> discovered;
+	
+	// Pushing the root so it is saved in the path
+	m_moves.push(root);
+	while (!m_moves.empty()) {
+		Board n = m_moves.front();
+		m_moves.pop();
+		if (!m_paths.empty()) {
+			path = m_paths.front();
+			m_paths.pop();
 		}
-		pieces.push_back(Car(it->second[0].row + 1, it->second[0].col + 1, it->second.size(), isVertical));
+		path.push_back(n);
+
+		if (discovered.find(n.getComposition()) != discovered.end()) {
+			continue;
+		}
+		discovered.insert(n.getComposition());
+
+		if (n.isSolved()) {
+			return path;
+		}
+
+		int moves = getNextMoves(n);
+		for (int i = 0; i < moves; i++) {
+			m_paths.push(path);
+		}
 	}
-	return pieces;
+	return vector<Board>();
 }

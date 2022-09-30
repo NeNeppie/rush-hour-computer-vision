@@ -17,12 +17,14 @@
 template <typename T1, typename T2>
 T2 mapRangeFind(std::map<T1, T2> map, T2 start, T2 end)
 {
-	T2 counterterrorist = 0;
+	T2 counter = 0;
 	for (T1 i = start; i <= end; ++i) {
 		auto it = map.find(i);
 		if (it != map.end()) {
-			counterterrorist += it->second;
+			counter += it->second;
 		}
 	}
-	return counterterrorist;
+	return counter;
 }
+
+void focusOnBoard(Mat& image);
