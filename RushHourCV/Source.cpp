@@ -1,18 +1,20 @@
-#include "Process.h"
 #include "Vision.h"
 #include "Solver.h"
 #include "Board.h"
 #include <chrono>
-
-bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
+#include <thread>
 
 int main(void)
 {
-	Mat image = processToMat(L"scrcpy.exe");
+	cout << "Starting ADB server..." << endl;
+	system("adb.exe start-server");
+	system("adb.exe exec-out screencap -p > output.png");
+	Mat image = imread("output.png");
 	if (image.empty()) {
+		cerr << "Error getting screencap." << endl;
+		system("adb.exe kill-server");
 		return -1;
 	}
-	//Mat image = imread("original.jpg");		//! TEMP
 	focusOnBoard(image);
 
 	const double cropX = image.cols / (float)BOARD_SIZE;
@@ -71,50 +73,61 @@ int main(void)
 	}
 
 	cout << "Generated board: " << endl;
-	board.printFlat();
+	board.printBoard();
 	system("PAUSE");
 
 	// Solving the generated board
+	cout << "Starting ADB server." << endl;
+	//system("scrcpy-win64-v1.24\\adb.exe start-server");
 	Solver solver;
 	auto t_start = chrono::system_clock::now();
-	auto path = solver.solveBoard(board);
+	cout << "Solving board..." << endl;
+	vector<Board> path = solver.solveBoard(board);
 	chrono::duration<float> t_durr = chrono::system_clock::now() - t_start;
+	cout << "Time taken: " << to_string(t_durr.count()) << " seconds" << endl;
 	if (!path.empty()) {
-		for (Board& b : path) {
-			b.printBoard();
+		for (int i = 0; i < path.size(); i++) {
+			if (path[i].getMask() == path[0].getMask()) {
+				this_thread::sleep_for(chrono::milliseconds(500));
+				string shellCommand = "adb.exe shell input tap " +
+					to_string(BOARD_TOPLEFT_X) + ' ' + to_string(BOARD_TOPLEFT_Y);
+				system(shellCommand.c_str());
+				continue;
+			}
+			path[i].printBoard();
 			cout << endl;
+
+			auto itCurr = path[i].getPieces().begin();
+			auto itPrev = path[i - 1].getPieces().begin();
+			while (itCurr != path[i].getPieces().end()) {
+				int source = itPrev->m_pos;
+				int destination = itCurr->m_pos;
+				if (source != destination) {
+					// '20' is a random value just so we're not right on the edge
+					int srcCol = source % BOARD_SIZE, srcRow = source / BOARD_SIZE;
+					int dstCol = destination % BOARD_SIZE, dstRow = destination / BOARD_SIZE;
+					int srcX = (cropX * 2 * srcCol + cropX) + BOARD_TOPLEFT_X;
+					int srcY = (cropY * 2 * srcRow + cropY) + BOARD_TOPLEFT_Y;
+					int dstX = (cropX * 2 * dstCol + cropX) + BOARD_TOPLEFT_X;
+					int dstY = (cropY * 2 * dstRow + cropY) + BOARD_TOPLEFT_Y;
+
+					string shellCommand = "adb.exe shell input swipe " +
+						to_string(srcX) + ' ' + to_string(srcY) + ' ' +
+						to_string(dstX) + ' ' + to_string(dstY) + ' ' + 
+						to_string(300 * (abs(srcCol - dstCol) + abs(srcRow - dstRow)));	// duration of the swipe
+					system(shellCommand.c_str());
+					this_thread::sleep_for(chrono::milliseconds(50));
+				}
+				++itCurr;
+				++itPrev;
+			}
 		}
 	}
 	else {
 		cout << "Couldn't find a solution. Something's wrong..." << endl;
 	}
-	cout << "Time taken: " << to_string(t_durr.count()) << " seconds" << endl;
+	cout << "Stopping ADB server." << endl;
+	system("adb.exe kill-server");
+	system("PAUSE");
 	return 0;
-}
-
-// False if the maps match by at least 80% (empty tile)
-// True otherwise (special tile)
-bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2)
-{
-	int resemblance = 0;
-	auto it1 = m1.begin();
-	auto it2 = m2.begin();
-	while (it1 != m1.end() && it2 != m2.end()) {
-		if (it1->first < it2->first) {
-			++it1;
-		}
-		else if (it1->first > it2->first) {
-			++it2;
-		}
-		else if (it1->first == it2->first) {
-			resemblance += it1->second < it2->second ? it1->second : it2->second;
-			++it1, ++it2;
-		}
-	}
-
-	size_t mapSize = m1.size() > m2.size() ? m1.size() : m2.size();
-	if (resemblance > (mapSize * 0.8)) {
-		return false;
-	}
-	return true;
 }

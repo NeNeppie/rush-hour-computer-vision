@@ -1,8 +1,15 @@
 #pragma once
 #include "stdafx.h"
 
-#define BOARD_TOPLEFT		54, 317		// TODO: Calculate board coordinates dynamically
-#define BOARD_BOTTOMRIGHT	359, 622	// Instead of doing it manually
+#define BOARD_TOPLEFT		143, 823	// TODO: Calculate board coordinates dynamically
+#define BOARD_BOTTOMRIGHT	934, 1614	// Instead of doing it manually
+#define BOARD_TOPLEFT_X		143
+#define BOARD_TOPLEFT_Y		823
+
+// Ad skip buttons
+// 70, 150 - 1000, 160
+// Next level button
+// 530, 2000
 
 // Pixel value ranges
 #define ORANGE_PIXRANGE_START	167
@@ -14,17 +21,6 @@
 #define RED_PIXRANGE_START		32
 #define RED_PIXRANGE_END		35
 
-template <typename T1, typename T2>
-T2 mapRangeFind(std::map<T1, T2> map, T2 start, T2 end)
-{
-	T2 counter = 0;
-	for (T1 i = start; i <= end; ++i) {
-		auto it = map.find(i);
-		if (it != map.end()) {
-			counter += it->second;
-		}
-	}
-	return counter;
-}
-
 void focusOnBoard(Mat& image);
+bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
+int mapRangeFind(std::map<uchar, int> map, int start, int end);
