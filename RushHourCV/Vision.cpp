@@ -12,7 +12,7 @@ void focusOnBoard(Mat& image)
 
 // False if the maps match by at least 80% (empty tile)
 // True otherwise (special tile)
-bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2)
+bool compareColAndRow(std::map<uchar, int>& m1, std::map<uchar, int>& m2)
 {
 	int resemblance = 0, count = 0;
 	auto it1 = m1.begin();

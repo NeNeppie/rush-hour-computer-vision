@@ -1,9 +1,8 @@
 #pragma once
+#include "stdafx.h"
 #include <cstdint>
 #include <vector>
-#include <iostream>
 #include <tuple>
-#include <map>
 
 using namespace std;
 

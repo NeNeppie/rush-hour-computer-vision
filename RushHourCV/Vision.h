@@ -1,5 +1,10 @@
 #pragma once
 #include "stdafx.h"
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
+using namespace cv;
 
 #define BOARD_TOPLEFT		143, 823	// TODO: Calculate board coordinates dynamically
 #define BOARD_BOTTOMRIGHT	934, 1614	// Instead of doing it manually
@@ -22,5 +27,5 @@
 #define RED_PIXRANGE_END		35
 
 void focusOnBoard(Mat& image);
-bool compareColAndRow(map<uchar, int>& m1, map<uchar, int>& m2);
+bool compareColAndRow(std::map<uchar, int>& m1, std::map<uchar, int>& m2);
 int mapRangeFind(std::map<uchar, int> map, int start, int end);

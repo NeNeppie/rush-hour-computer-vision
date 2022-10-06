@@ -137,12 +137,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Board.cpp" />
+    <ClCompile Include="Exec.cpp" />
     <ClCompile Include="Solver.cpp" />
     <ClCompile Include="Vision.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Board.h" />
+    <ClInclude Include="Exec.h" />
     <ClInclude Include="Solver.h" />
     <ClInclude Include="Vision.h" />
     <ClInclude Include="stdafx.h" />
