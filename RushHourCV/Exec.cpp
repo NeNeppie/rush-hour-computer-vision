@@ -28,5 +28,4 @@ void adb::execInput(int x1, int y1, int x2, int y2, int duration)
 		to_string(x2) + ' ' + to_string(y2) + ' ' + to_string(duration);
 	system((m_path + shellCommand).c_str());
 	this_thread::sleep_for(chrono::milliseconds(50));
-
 }

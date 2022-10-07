@@ -5,20 +5,78 @@
 #include <chrono>
 #include <thread>
 
+Board constructBoard(Mat& image, double c);
 void makeMove(adb& bridge, Board& bC, Board& bP, double c);
 
 int main(void)
 {
-	adb bridge;
-	bridge.screencap();
-	Mat image = imread("output.png");
-	if (image.empty()) {
-		cerr << "Error getting screencap." << endl;
-		return -1;
-	}
-	focusOnBoard(image);
+	int currlvl, endlvl;
+	cout << "Starting level? " << endl;
+	cin >> currlvl;
+	cout << "Final level?" << endl;
+	cin >> endlvl;
 
-	const double crop = image.cols / (float)BOARD_SIZE;
+	adb bridge;
+	while (currlvl++ <= endlvl) {
+		bridge.screencap();
+		Mat image = getBoardImage("output.png");
+		if (image.empty()) {
+			return -1;
+		}
+
+		const double crop = image.cols / (float)BOARD_SIZE;
+		Board board = constructBoard(image, crop);
+		cout << "Generated board: " << endl;
+		board.printBoard();
+
+		// Solving the generated board
+		Solver solver;
+		auto t_start = chrono::system_clock::now();
+		cout << "Solving board..." << endl;
+		vector<Board> path = solver.solveBoard(board);
+		chrono::duration<float> t_durr = chrono::system_clock::now() - t_start;
+		cout << "Time taken: " << to_string(t_durr.count()) << " seconds" << endl;
+
+		if (!path.empty()) {
+			cout << "Executing moves" << endl;
+			for (int i = 0; i < path.size(); i++) {
+				if (path[i].getMask() == path[0].getMask()) {
+					continue;
+				}
+				path[i].printBoard();
+				cout << endl;
+
+				makeMove(bridge, path[i], path[i - 1], crop);
+				if (i == 1) {
+					bridge.execInput(BOARD_TOPLEFT_X, BOARD_TOPLEFT_Y);
+					bridge.screencap();
+					Mat img = getBoardImage("output.png");
+					if (image.empty()) {
+						return -1;
+					}
+					Board b = constructBoard(img, crop);
+					// Retrying because the first swipe very randomly refuses to register
+					if (b.getComposition() != path[i].getComposition()) {
+						cout << "Failed to execute move, retrying..." << endl << endl;
+						makeMove(bridge, path[i], path[i - 1], crop);
+					}
+				}
+			}
+		}
+		else {
+			cerr << "Error finding solution" << endl;
+			return -1;
+		}
+
+		// Next level
+		this_thread::sleep_for(chrono::milliseconds(1000));
+		bridge.execInput(530, 1900);
+	}
+	return 0;
+}
+
+Board constructBoard(Mat& image, double c)
+{
 	Board board{};
 	for (int i = 0; i < BOARD_SIZE; i++) {
 		for (int j = 0; j < BOARD_SIZE; j++) {
@@ -27,7 +85,7 @@ int main(void)
 			}
 
 			// Cutting a smaller square
-			Mat square = image(Range(crop * i, crop * (i + 1)), Range(crop * j, crop * (j + 1)));
+			Mat square = image(Range(c * i, c * (i + 1)), Range(c * j, c * (j + 1)));
 			Mat midColData = square.col(square.cols / 2);
 			Mat midRowData = square.row(square.rows / 2);
 
@@ -64,38 +122,7 @@ int main(void)
 			}
 		}
 	}
-
-	cout << "Generated board: " << endl;
-	board.printBoard();
-	system("PAUSE");
-
-	// Solving the generated board
-	Solver solver;
-	auto t_start = chrono::system_clock::now();
-	cout << "Solving board..." << endl;
-	vector<Board> path = solver.solveBoard(board);
-	chrono::duration<float> t_durr = chrono::system_clock::now() - t_start;
-	cout << "Time taken: " << to_string(t_durr.count()) << " seconds" << endl;
-
-	if (!path.empty()) {
-		cout << "Executing moves" << endl;
-		for (int i = 0; i < path.size(); i++) {
-			if (path[i].getMask() == path[0].getMask()) {
-				bridge.execInput(BOARD_TOPLEFT_X + crop, BOARD_TOPLEFT_Y + crop);
-				continue;
-			}
-			path[i].printBoard();
-			cout << endl;
-
-			makeMove(bridge, path[i], path[i - 1], crop);
-		}
-	}
-	else {
-		cerr << "Error finding solution" << endl;
-	}
-	
-	system("PAUSE");
-	return 0;
+	return board;
 }
 
 void makeMove(adb& bridge, Board& bC, Board& bP, double c)

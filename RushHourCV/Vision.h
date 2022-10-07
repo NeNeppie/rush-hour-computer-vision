@@ -11,11 +11,6 @@ using namespace cv;
 #define BOARD_TOPLEFT_X		143
 #define BOARD_TOPLEFT_Y		823
 
-// Ad skip buttons
-// 70, 150 - 1000, 160
-// Next level button
-// 530, 2000
-
 // Pixel value ranges
 #define ORANGE_PIXRANGE_START	167
 #define ORANGE_PIXRANGE_END		169
@@ -26,6 +21,6 @@ using namespace cv;
 #define RED_PIXRANGE_START		32
 #define RED_PIXRANGE_END		35
 
-void focusOnBoard(Mat& image);
+Mat getBoardImage(string path);
 bool compareColAndRow(std::map<uchar, int>& m1, std::map<uchar, int>& m2);
 int mapRangeFind(std::map<uchar, int> map, int start, int end);
