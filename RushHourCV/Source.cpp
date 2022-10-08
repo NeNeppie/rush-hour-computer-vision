@@ -97,7 +97,7 @@ Board constructBoard(Mat& image, double c)
 
 			if (compareColAndRow(midColDataMap, midRowDataMap)) {
 				// Main piece (The "red car")
-				if (mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END) > 3) {
+				if (mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END) > (c / BOARD_SIZE)) {
 					board.addMain(i, j);
 					continue;
 				}
