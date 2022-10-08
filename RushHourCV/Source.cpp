@@ -8,13 +8,25 @@
 Board constructBoard(Mat& image, double c);
 void makeMove(adb& bridge, Board& bC, Board& bP, double c);
 
-int main(void)
+int main(int argc, char** argv)
 {
 	int currlvl, endlvl;
-	cout << "Starting level? " << endl;
-	cin >> currlvl;
-	cout << "Final level?" << endl;
-	cin >> endlvl;
+	switch (argc) {
+	case 1:
+		cout << "No additional arguments. Solving one board" << endl;
+		currlvl = 0, endlvl = 0;
+		break;
+	case 2:
+		cout << "Solving the next " << argv[1] << " boards" << endl;
+		currlvl = 1, endlvl = atoi(argv[1]);
+		break;
+	case 3:
+		currlvl = atoi(argv[1]), endlvl = atoi(argv[2]);
+		break;
+	default:
+		cerr << "Too many arguments provided" << endl;
+		return -1;
+	}
 
 	adb bridge;
 	while (currlvl++ <= endlvl) {
