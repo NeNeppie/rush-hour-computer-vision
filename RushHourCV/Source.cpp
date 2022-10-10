@@ -108,27 +108,28 @@ Board constructBoard(Mat& image, double c)
 			}
 
 			if (compareColAndRow(midColDataMap, midRowDataMap)) {
-				// Main piece (The "red car")
-				if (mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END) > (c / BOARD_SIZE)) {
+				int rowRed = mapRangeFind(midRowDataMap, RED_PIXRANGE_START, RED_PIXRANGE_END); 
+				int rowOrange = mapRangeFind(midRowDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
+				int rowPurple = mapRangeFind(midRowDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
+				int colOrange = mapRangeFind(midColDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END);
+				int colPurple = mapRangeFind(midColDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END);
+
+				if (rowRed > (c / BOARD_SIZE)) {
 					board.addMain(i, j);
 					continue;
 				}
-				else if (midColDataMap.size() < midRowDataMap.size()) {
-					// Vertical piece
-					if (mapRangeFind(midRowDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END) >
-						mapRangeFind(midRowDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END)) {
-						board.addPiece(i, j, 2, Vert);
-						continue;
-					}
+
+				int highestOccurance = max(rowOrange, max(rowPurple, max(colOrange, colPurple)));
+				if (highestOccurance == rowOrange) {	// Vertical Orange piece
+					board.addPiece(i, j, 2, Vert);
+				}
+				else if (highestOccurance == rowPurple) {	// Vertical Purple piece
 					board.addPiece(i, j, 3, Vert);
 				}
-				else {
-					// Horizontal piece
-					if (mapRangeFind(midColDataMap, ORANGE_PIXRANGE_START, ORANGE_PIXRANGE_END) >
-						mapRangeFind(midColDataMap, PURPLE_PIXRANGE_START, PURPLE_PIXRANGE_END)) {
-						board.addPiece(i, j, 2, Horz);
-						continue;
-					}
+				else if (highestOccurance == colOrange) {	// Horizontal Orange piece
+					board.addPiece(i, j, 2, Horz);
+				}
+				else if (highestOccurance == colPurple) {	// Horizontal Purple piece
 					board.addPiece(i, j, 3, Horz);
 				}
 			}
